@@ -3,13 +3,13 @@ public with sharing class OpportunityTriggerHandler extends TriggerHandler {
     
     // Set default Type for new Opportunities
     public override void beforeInsert(){
-        OpportunityHelper newOpportunityHelper = new OpportunityHelper((List<Opportunity>) trigger.new);
-        newOpportunityHelper.setDefaultOpportunityType();
+   
+        OpportunityHelper.setDefaultOpportunityType((List<Opportunity>) trigger.new);
     }
         
     public override void afterInsert(){
-        OpportunityHelper newOpportunityHelper = new OpportunityHelper((List<Opportunity>) trigger.new);
-        newOpportunityHelper.insertTask();
+        
+        OpportunityHelper.insertTask((List<Opportunity>) trigger.new);
     }
 
 
@@ -22,29 +22,26 @@ public with sharing class OpportunityTriggerHandler extends TriggerHandler {
     */
     public override void beforeUpdate(){
         
-        OpportunityHelper newOpportunityHelper = new OpportunityHelper((List<Opportunity>) trigger.new);
-        newOpportunityHelper.setPrimaryContact();
-        newOpportunityHelper.amountValidation();
-        newOpportunityHelper.updateDescriptionFromStage();
+        OpportunityHelper.setPrimaryContact((List<Opportunity>) trigger.new);
+        OpportunityHelper.amountValidation((List<Opportunity>) trigger.new);
+        OpportunityHelper.updateDescriptionFromStage((List<Opportunity>) trigger.new);
     }
             
     
              
     public override void beforeDelete(){
-        OpportunityHelper newOpportunityHelper = new OpportunityHelper((List<Opportunity>) trigger.old);
-        newOpportunityHelper.deleteCloseWonOpportunity();
-        newOpportunityHelper.validateCloseOpportunity();
+        
+        OpportunityHelper.deleteCloseWonOpportunity((List<Opportunity>) trigger.old);
+        OpportunityHelper.validateCloseOpportunity((List<Opportunity>) trigger.old);
     }
 
     public override void afterDelete(){
-        OpportunityHelper newOpportunityHelper = new OpportunityHelper((List<Opportunity>) trigger.old);
-        OpportunityHelper.notifyOwnersOpportunityDeleted(trigger.old);
+        OpportunityHelper.notifyOwnersOpportunityDeleted((List<Opportunity>) trigger.old);
     }
     
     public override void afterUndelete(){
         TriggerHandler.bypass('OpportunityTriggerHandler');
-        OpportunityHelper newOpportunityHelper = new OpportunityHelper((Map<Id, Opportunity>) trigger.newMap);
-        newOpportunityHelper.assignPrimaryContact();
+        OpportunityHelper.assignPrimaryContact((List<Opportunity>) trigger.new, (Map<Id, Opportunity>) trigger.newMap);
     
     }
     

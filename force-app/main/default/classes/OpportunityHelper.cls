@@ -1,16 +1,6 @@
 public with sharing class OpportunityHelper {
-    List<Opportunity> triggerList = new List<Opportunity>();
-    Map<Id, Opportunity> triggerMap = new Map<Id, Opportunity>();
-
-    public OpportunityHelper(List<Opportunity> triggerList){
-        this.triggerList = triggerList;
-    }
-
-    public OpportunityHelper(Map<Id, Opportunity> triggerMap){
-        this.triggerMap = triggerMap;
-    }
     
-
+    
          /*
     notifyOwnersOpportunityDeleted:
     - Sends an email notification to the owner of the Opportunity when it gets deleted.
@@ -45,10 +35,10 @@ public with sharing class OpportunityHelper {
     // - Assigns a primary contact with the title of 'VP Sales' to undeleted Opportunities.
     // - Only updates the Opportunities that don't already have a primary contact.
     // */
-    public void assignPrimaryContact() {        
-        Map<Id, Opportunity> oppMap = new Map<Id, Opportunity>();
+    public static void assignPrimaryContact(List<Opportunity> oppList, Map<Id, Opportunity> oppMap) {        
+        Map<Id, Opportunity> oppMapToUpdate = new Map<Id, Opportunity>();
         Set<Id> accountIds = new Set<Id>();
-        for (Opportunity opp : triggerMap.values()){
+            for (Opportunity opp : oppMap.values()){
             if(opp.Primary_Contact__c == null && opp.AccountId != null){
                 accountIds.add(opp.AccountId);
             }
@@ -58,18 +48,18 @@ public with sharing class OpportunityHelper {
             primaryContactMap.put(contact.AccountId, contact);
         } 
 
-        for (Opportunity opp : triggerMap.values()){            
+        for (Opportunity opp : oppMap.values()){            
             if (opp.Primary_Contact__c == null){
                 Opportunity oppToUpdate = new Opportunity(Id = opp.Id);
                 oppToUpdate.Primary_Contact__c = primaryContactMap.get(opp.AccountId).Id;
-                oppMap.put(opp.Id, oppToUpdate);
+                oppMapToUpdate.put(opp.Id, oppToUpdate);
             }
         }
-        update oppMap.values();
+        update oppMapToUpdate.values();
     }
 
-    public void amountValidation(){
-        for(Opportunity opp : triggerList){
+    public static void amountValidation(List<Opportunity> oppList){
+        for(Opportunity opp : oppList){
             if(opp.Amount <= 5000){
                 opp.addError('Opportunity amount must be greater than 5000');
                         
@@ -78,44 +68,51 @@ public with sharing class OpportunityHelper {
         }
     }
 
-    public void setPrimaryContact(){
+    public static void setPrimaryContact(List<Opportunity> oppList){
         List<Id> accountIds = new List<Id>();
-            for (Opportunity opp : triggerList) {
+            for (Opportunity opp : oppList) {
                 if (opp.AccountId != null) {
                     accountIds.add(opp.AccountId);
                 }
             }
             
             Map<Id, Contact> ceoContactsByAccount = new Map<Id, Contact> ([SELECT Id, AccountId, Title FROM Contact WHERE AccountId IN :accountIds AND Title = 'CEO']);
-            system.debug(ceoContactsByAccount);
+           
             Map<Id, Contact> accountIdToContact = new Map<Id, Contact>();
-            for (Contact cont : ceoContactsByAccount.values()) {
-                accountIdToContact.put(cont.AccountId, cont);
-            }
-            for(Opportunity opp : triggerList){
-            opp.Primary_Contact__c = accountIdToContact.get(opp.AccountId).Id;
+        
+                for (Contact cont : ceoContactsByAccount.values()) {
+                    accountIdToContact.put(cont.AccountId, cont);
+                }
+                
+            for(Opportunity opp : oppList){
+                if(opp.Primary_Contact__c == null && accountIdToContact.containsKey(opp.AccountId)){
+                    opp.Primary_Contact__c = accountIdToContact.get(opp.AccountId).Id;
+                }
             }
         }
 
-    public void updateDescriptionFromStage(){
+    public static void updateDescriptionFromStage(List<Opportunity> oppList){
 
-            for(Opportunity opp : triggerList){
-                system.debug('we are on line 96');
+        system.debug(oppList);    
+        for(Opportunity opp : oppList){
+            if(opp.stageName != null){
+                system.debug(opp.Description);
                 opp.Description += 'Stage Change:' + opp.StageName;
             }
         }
+    }
     
-    public void setDefaultOpportunityType(){
-        for(Opportunity opp : triggerList){
+    public static void setDefaultOpportunityType(List<Opportunity> oppList){
+        for(Opportunity opp : oppList){
             if (opp.Type == null){
                 opp.Type = 'New Customer';
                 }        
             } 
     }
 
-    public void insertTask(){
+    public static void insertTask(List<Opportunity> oppList){
         List<Task> tskList = new List<Task>();
-        for (Opportunity opp : triggerList){
+        for (Opportunity opp : oppList){
             Task tsk = new Task();
             tsk.Subject = 'Call Primary Contact';
             tsk.WhatId = opp.Id;
@@ -128,13 +125,13 @@ public with sharing class OpportunityHelper {
     
     }
 
-    public void deleteCloseWonOpportunity(){
+    public static void deleteCloseWonOpportunity(List<Opportunity> oppList){
         List<Id> accIdList = new List<Id>();
-        for(Opportunity oldOpp : triggerList){
+        for(Opportunity oldOpp : oppList){
             accIdList.add(oldOpp.AccountId);
         }
         Map<Id, Account> accounts = new Map<Id, Account>([SELECT Id, Industry FROM Account WHERE Id IN :accIdList]);
-        for (Opportunity oldOpp : triggerList){
+        for (Opportunity oldOpp : oppList){
             if (oldOpp.StageName == 'Closed Won' && accounts.get(oldOpp.AccountId).Industry == 'Banking'){
                 oldOpp.addError('Cannot delete closed opportunity');
             }
@@ -142,10 +139,10 @@ public with sharing class OpportunityHelper {
        }
     }
 
-    public void validateCloseOpportunity(){
-        for(Opportunity opp : triggerList){
-            if (opp.IsClosed){
-            opp.addError('Cannot delete closed opportunity');
+    public static void validateCloseOpportunity(List<Opportunity> oppList){
+        for(Opportunity oldOpp : oppList){
+            if (oldOpp.IsClosed){
+            oldOpp.addError('Cannot delete closed opportunity');
             }
         }                        
     }
